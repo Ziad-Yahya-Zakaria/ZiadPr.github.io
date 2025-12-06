@@ -1,4 +1,4 @@
-﻿// --- كائن الترجمة الشامل ---
+// --- كائن الترجمة الشامل ---
 const translations = {
     'ar': {
         lang_locale: 'ar-EG', lang_direction: 'rtl',
@@ -135,7 +135,33 @@ const initializeVoucher = () => {
     updateTotals();
 };
 
-// --- 2. وظيفة الطباعة الجديدة ---
+// --- 2. وظيفة الطباعة ---
+
+const getPrintStyles = () => {
+    return `
+        @page { size: a4 portrait; margin: 10mm; }
+        body { 
+            font-family: 'Tajawal', Tahoma, Arial, sans-serif !important; 
+            color: #000 !important; 
+            background-color: white !important;
+            direction: rtl;
+        }
+        body * { 
+            font-family: 'Tajawal', Tahoma, Arial, sans-serif !important; 
+            color: #000 !important; 
+            text-align: right !important; 
+            direction: rtl !important; 
+        }
+        .summary-header-print { font-size: 20pt; font-weight: bold; border-bottom: 2px solid #333; text-align: center; margin-bottom: 20px; padding-bottom: 10px;}
+        .summary-table-print { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 10pt; }
+        .summary-table-print th, .summary-table-print td { border: 1px solid #000; padding: 8px; text-align: right; }
+        .summary-table-print th { background-color: #f0f0f0; }
+        .signature-container { display: flex; flex-direction: row; justify-content: space-around; margin-top: 40px; }
+        .signature-box { width: 40%; text-align: center; }
+        .signature-line { border-bottom: 1px solid #000; margin-top: 5px; height: 1px; }
+    `;
+};
+
 
 const generatePrintHTML = () => {
     const dict = translations[currentLang];
@@ -185,28 +211,30 @@ const generatePrintHTML = () => {
         optionalDetails += '</div>';
     }
 
-    const delegateSignatureContent = `<div style="width: 40%; text-align: center;"><p style="font-size: 10pt; margin-bottom: 5px;">${dict.pdf_lbl_signature_delegate}</p><div style="height: 30px; font-family: 'Rakkas', cursive; font-size: 24pt; color: #000; text-align: center; margin-bottom: 5px;">${delegateName}</div><div class="line" style="border-bottom: 1px solid #000; margin-top: 5px;"></div></div>`;
-    const recipientSignatureContent = `<div style="width: 40%; text-align: center;"><p style="font-size: 10pt; margin-bottom: 5px;">${dict.pdf_lbl_signature_recipient}</p><div style="height: 30px; margin-bottom: 5px;"></div><div class="line" style="border-bottom: 1px solid #000; margin-top: 5px;"></div></div>`;
+    const delegateSignatureContent = `<div class="signature-box"><p style="font-size: 10pt; margin-bottom: 5px;">${dict.pdf_lbl_signature_delegate}</p><div style="height: 30px; font-family: 'Rakkas', cursive; font-size: 24pt; color: #000; text-align: center; margin-bottom: 5px;">${delegateName}</div><div class="signature-line"></div></div>`;
+    const recipientSignatureContent = `<div class="signature-box"><p style="font-size: 10pt; margin-bottom: 5px;">${dict.pdf_lbl_signature_recipient}</p><div style="height: 30px; margin-bottom: 5px;"></div><div class="signature-line"></div></div>`;
 
     return `
-        <div class="summary-header-print">${dict.pdf_title}</div>
-        ${detailsTopHTML}
-        ${optionalDetails}
-        <table class="summary-table-print">
-            <thead><tr>
-                <th style="width: 20%;">${dict.pdf_th_value}</th>
-                <th style="width: 25%;">${dict.pdf_th_number}</th>
-                <th style="width: 35%;">${dict.pdf_th_customer}</th>
-                <th style="width: 20%;">${dict.pdf_th_date}</th>
-            </tr></thead>
-            <tbody>${invoiceRowsHTML}</tbody>
-        </table>
-        <div style="text-align: right; font-size: 14pt; font-weight: bold; margin-top: 15px; padding-top: 10px; border-top: 1px solid #333;">
-            ${dict.pdf_lbl_total} ${formattedTotal}
-        </div>
-        <div style="display: flex; flex-direction: row; justify-content: space-around; margin-top: 40px;">
-            ${delegateSignatureContent}
-            ${recipientSignatureContent}
+        <div style="padding: 10mm;">
+            <div class="summary-header-print">${dict.pdf_title}</div>
+            ${detailsTopHTML}
+            ${optionalDetails}
+            <table class="summary-table-print">
+                <thead><tr>
+                    <th style="width: 20%;">${dict.pdf_th_value}</th>
+                    <th style="width: 25%;">${dict.pdf_th_number}</th>
+                    <th style="width: 35%;">${dict.pdf_th_customer}</th>
+                    <th style="width: 20%;">${dict.pdf_th_date}</th>
+                </tr></thead>
+                <tbody>${invoiceRowsHTML}</tbody>
+            </table>
+            <div style="text-align: right; font-size: 14pt; font-weight: bold; margin-top: 15px; padding-top: 10px; border-top: 1px solid #333;">
+                ${dict.pdf_lbl_total} ${formattedTotal}
+            </div>
+            <div class="signature-container">
+                ${delegateSignatureContent}
+                ${recipientSignatureContent}
+            </div>
         </div>
     `;
 };
@@ -224,10 +252,9 @@ const openAndPrintReceipt = () => {
     }
 
     const receiptContentHTML = generatePrintHTML();
-    // 🛑 الحصول على تنسيقات الطباعة من وسم <style> في ملف HTML الرئيسي
-    const styleContent = document.querySelector('style').textContent;
     
-    // 🛑 تضمين الخطوط هنا بشكل صريح للنافذة المنبثقة
+    const printStyles = getPrintStyles();
+    
     const fontLinkHTML = `<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700;800&family=Roboto:wght@400;700&family=Rakkas&display=swap" rel="stylesheet">`;
 
     const printWindowContent = `
@@ -238,16 +265,16 @@ const openAndPrintReceipt = () => {
             <title>${dict.pdf_title} - ${voucherIdDisplay.textContent}</title>
             ${fontLinkHTML}
             <style>
-                ${styleContent}
+                ${printStyles} 
             </style>
         </head>
-        <body style="direction: ${dict.lang_direction}; font-family: 'Tajawal', Tahoma, Arial, sans-serif;">
+        <body>
             ${receiptContentHTML}
             <script>
                 window.onload = function() {
                     setTimeout(function() {
                         window.print();
-                    }, 500); // زيادة فترة التأخير
+                    }, 500); 
                 };
             </script>
         </body>
