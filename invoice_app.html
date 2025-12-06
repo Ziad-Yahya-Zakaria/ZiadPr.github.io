@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-key="app_title">RZ Invoice - نظام فواتير</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700;800&family=Roboto:wght@400;700&family=Rakkas&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        /* --- 1. المتغيرات والألوان --- */
+        :root {
+            --primary-color: #00bcd4;	
+            --secondary-color: #00897b;
+            --bg-dark: #0A1929;	
+            --card-dark: #1E293B;	
+            --text-dark: #E2E8F0;
+            --bg-light: #F1F5F9;
+            --card-light: #FFFFFF;
+            --text-light: #1E293B;
+        }
+
+        /* --- 2. الإعدادات الأساسية للجسم --- */
+        body {
+            margin: 0;
+            padding: 0 0 70px 0;	
+            transition: background-color 0.4s, color 0.4s;
+            line-height: 1.6;
+            font-family: 'Tajawal', sans-serif; 
+        }
+        
+        .dark-mode { background-color: var(--bg-dark); color: var(--text-dark); }
+        .light-mode { background-color: var(--bg-light); color: var(--text-light); }
+
+        /* --- 3. حاوية التطبيق والتنسيقات العامة --- */
+        .container { max-width: 900px; margin: 30px auto; padding: 0 20px; }
+        .info-card { padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .dark-mode .info-card { background-color: var(--card-dark); box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4); }
+        .light-mode .info-card { background-color: var(--card-light); box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+        .info-card h3 { color: var(--primary-color); }
+
+        /* المدخلات */
+        input[type="text"], input[type="date"], input[type="number"], select {
+            width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 6px; box-sizing: border-box; font-size: 16px;
+        }
+        .dark-mode input, .dark-mode select { background-color: var(--bg-dark); color: var(--text-dark); border: 1px solid #334155; }
+        .light-mode input, .light-mode select { background-color: var(--card-light); color: var(--text-light); border: 1px solid #E2E8F0; }
+
+        /* الأزرار والإجمالي */
+        .btn { padding: 10px 20px; border: none; border-radius: 20px; cursor: pointer; font-size: 16px; font-weight: 600; margin-inline-end: 10px; display: inline-flex; align-items: center; }
+        .btn-primary { background-color: var(--primary-color); color: var(--bg-dark); }
+        .btn-success { background-color: #28a745; color: white; }
+        .btn-danger { background-color: #ff3860; color: white; }
+        .totals-section { background-color: var(--secondary-color); color: var(--bg-dark); font-size: 24px; font-weight: 700; display: flex; justify-content: space-between; padding: 20px; margin-top: 25px; border-radius: 8px; }
+        .invoice-row { grid-template-columns: 2fr 1.5fr 2fr 1.5fr 50px; gap: 15px; display: grid; padding: 15px; border-radius: 8px; }
+        .app-screen { display: none; }
+        .app-screen.active { display: block; }
+
+        /* شريط التنقل */
+        .nav-bar { position: fixed; bottom: 0; left: 0; right: 0; display: flex; justify-content: space-around; padding: 10px 0; z-index: 1000; }
+        .dark-mode .nav-bar { background-color: var(--card-dark); }
+        .light-mode .nav-bar { background-color: var(--card-light); }
+        .nav-btn { background: none; border: none; font-size: 14px; opacity: 0.7; }
+        .nav-btn.active, .nav-btn:hover { color: var(--primary-color); opacity: 1; }
+
+        /* --- 4. تنسيقات الطباعة (لن يتم استخدامها هنا، بل سيتم نسخها في JS) --- */
+        @media print {
+            @page { size: a4 portrait; margin: 10mm; }
+            body { font-family: 'Tajawal', Tahoma, Arial, sans-serif !important; color: #000 !important; background-color: white !important; }
+            body * { font-family: 'Tajawal', Tahoma, Arial, sans-serif !important; color: #000 !important; text-align: right !important; direction: rtl !important; }
+            .summary-header-print { font-size: 20pt; font-weight: bold; border-bottom: 2px solid #333; text-align: center; margin-bottom: 20px; padding-bottom: 10px;}
+            .summary-table-print { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 10pt; }
+            .summary-table-print th, .summary-table-print td { border: 1px solid #000; padding: 8px; text-align: right; }
+            .summary-table-print th { background-color: #f0f0f0; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1 style="color: var(--primary-color);"><i class="fa-solid fa-receipt"></i> <span data-key="app_title">RZ Invoice</span></h1>
+    </div>
+
+    <div id="new-receipt-screen" class="app-screen active">
+        <div class="info-card">
+            <h3><i class="fas fa-user-tie"></i> <span data-key="lbl_delegate_info_title">بيانات المندوب والإذن</span></h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div>
+                    <label for="delegate-name-input" data-key="lbl_delegate_name">اسم المندوب:</label>
+                    <input type="text" id="delegate-name-input" data-placeholder_key="ph_delegate_name" placeholder="اسم المندوب (إجباري)" style="margin-bottom: 0;">
+                </div>
+                <div style="padding-top: 10px;">
+                    <p style="margin: 0; font-size: 14px; opacity: 0.7;"><span data-key="lbl_voucher_id">رقم الإذن:</span> <span id="voucher-id-display" style="font-weight: bold; color: var(--primary-color); margin-inline-start: 10px;">R-00000</span></p>
+                    <p style="margin: 5px 0 0 0; font-size: 14px; opacity: 0.7;"><span data-key="lbl_creation_date">تاريخ الإنشاء:</span> <span id="creation-date-display" style="margin-inline-start: 10px;">--/--/----</span></p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="info-card">
+            <h3><i class="fas fa-building"></i> <span data-key="lbl_optional_info_title">بيانات إضافية (اختياري)</span></h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div>
+                    <label for="company-name-input" data-key="lbl_company_name">اسم الشركة:</label>
+                    <input type="text" id="company-name-input" data-placeholder_key="ph_company_name" placeholder="اسم الشركة" style="margin-bottom: 0;">
+                </div>
+                <div>
+                    <label for="delegate-code-input" data-key="lbl_delegate_code">كود المندوب:</label>
+                    <input type="text" id="delegate-code-input" data-placeholder_key="ph_delegate_code" placeholder="كود المندوب" style="margin-bottom: 0;">
+                </div>
+            </div>
+        </div>
+
+        <h3 style="margin-top: 30px;"><i class="fas fa-clipboard-list"></i> <span data-key="title_invoices">الفواتير</span></h3>
+        
+        <div id="invoice-items-container" class="invoice-items-list">
+            </div>
+        
+        <button type="button" id="add-invoice-btn" class="btn btn-primary" style="margin-top: 20px;"><i class="fas fa-plus"></i> <span data-key="btn_add_invoice">إضافة فاتورة</span></button>
+
+        <div class="totals-section">
+            <div data-key="lbl_total">الإجمالي الكلي:</div>
+            <span id="total-amount-span">0.00 ج.م</span>
+        </div>
+        
+        <div class="action-buttons">
+            <button type="button" id="print-pdf-btn" class="btn btn-success"><i class="fas fa-file-pdf"></i> <span data-key="btn_print_pdf">فتح الإيصال وطباعته (A4)</span></button>
+            <button type="button" id="reset-form-btn" class="btn btn-danger"><i class="fas fa-redo"></i> <span data-key="btn_reset">إعادة ضبط</span></button>
+        </div>
+    </div>
+
+    <div id="settings-screen" class="app-screen">
+        <div class="info-card">
+            <h3><i class="fas fa-palette"></i> <span data-key="settings_theme_title">الوضع واللغة</span></h3>
+            <label for="theme-select" data-key="settings_theme_mode">الوضع:</label>
+            <select id="theme-select" style="margin-bottom: 20px;">
+                <option value="dark" data-key="theme_dark">ليلي</option>
+                <option value="light" data-key="theme_light">نهاري</option>
+            </select>
+
+            <label for="lang-select" data-key="settings_language">اللغة:</label>
+            <select id="lang-select" style="margin-bottom: 0;">
+                <option value="ar" data-key="lang_ar">العربية (Arabic)</option>
+                <option value="en" data-key="lang_en">الإنجليزية (English)</option>
+            </select>
+        </div>
+    </div>
+
+    <div id="about-screen" class="app-screen">
+        <div class="info-card">
+            <h3><i class="fas fa-info-circle"></i> <span data-key="about_title">حول التطبيق</span></h3>
+            <p data-key="about_description">تطبيق RZ Invoice هو أداة بسيطة وفعالة لإنشاء وتتبع فواتير وإيصالات الاستلام.</p>
+            <p><strong data-key="about_version">الإصدار:</strong> V6.0 (Cloudflare Ready)</p>
+        </div>
+    </div>
+
+</div>
+
+<div class="nav-bar">
+    <button class="nav-btn active" data-target="new-receipt-screen" data-key="nav_new_receipt">
+        <i class="fas fa-file-invoice"></i>
+        <span>إيصال جديد</span>
+    </button>
+    <button class="nav-btn" data-target="settings-screen" data-key="nav_settings">
+        <i class="fas fa-cogs"></i>
+        <span>إعدادات</span>
+    </button>
+    <button class="nav-btn" data-target="about-screen" data-key="nav_about">
+        <i class="fas fa-info"></i>
+        <span>وصف</span>
+    </button>
+</div>
+
+<template id="invoice-row-template">
+    <div class="invoice-row">
+        <div class="input-group">
+            <label data-key="th_value">القيمة (ج.م)</label>
+            <input type="number" class="invoice-value" value="0" min="0" step="any">
+        </div>
+        <div class="input-group">
+            <label data-key="th_number">رقم الفاتورة</label>
+            <input type="text" class="invoice-number" data-placeholder_key="ph_invoice_number" placeholder="رقم الفاتورة">
+        </div>
+        <div class="input-group">
+            <label data-key="th_customer">اسم العميل</label>
+            <input type="text" class="invoice-customer" data-placeholder_key="ph_customer_name" placeholder="اسم العميل">
+        </div>
+        <div class="input-group">
+            <label data-key="th_date">تاريخ الفاتورة</label>
+            <input type="date" class="invoice-date">
+        </div>
+        <div class="remove-btn-container">
+            <button type="button" class="btn btn-danger remove-invoice-btn" style="margin-inline-start: 0;"><i class="fas fa-trash-alt"></i></button>
+        </div>
+    </div>
+</template>
+
+<script src="app.js"></script>
+
+</body>
+</html>
